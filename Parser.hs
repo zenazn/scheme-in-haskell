@@ -26,7 +26,6 @@ escapeChar = do char '\\'
                            'r' -> '\r'
                            't' -> '\t'
                            otherwise -> esc
-             <|> noneOf "\""
 
 
 parseString :: Parser LispVal
