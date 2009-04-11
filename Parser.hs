@@ -18,10 +18,20 @@ symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 spaces :: Parser ()
 spaces = skipMany1 space
 
+escapeChar :: Parser Char
+escapeChar = do char '\\'
+                esc <- anyChar
+                return $ case esc of
+                           'n' -> '\n'
+                           'r' -> '\r'
+                           't' -> '\t'
+                           otherwise -> esc
+             <|> noneOf "\""
+
 
 parseString :: Parser LispVal
 parseString = do char '"'
-                 x <- many (noneOf "\"")
+                 x <- many (escapeChar <|> noneOf "\"")
                  char '"'
                  return $ String x
 
@@ -42,11 +52,14 @@ parseExpr = parseAtom
         <|> parseString
         <|> parseNumber
 
+
 -- Parsing logic
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
                    Left err -> "No match: " ++ show err
-                   Right val -> "Found value"
+                   Right val -> case val of
+                                  String s -> "String: " ++ show s
+                                  otherwise -> "Found value"
 
 -- Main Loop
 main :: IO ()
