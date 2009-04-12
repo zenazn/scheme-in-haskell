@@ -15,7 +15,7 @@ data LispVal = Atom String
 
 -- Parsers
 symbol :: Parser Char
-symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
+symbol = oneOf "!$%&|*+.-/:<=>?@^_~"
 
 spaces :: Parser ()
 spaces = skipMany1 space
@@ -46,7 +46,7 @@ parseAtom = do first <- letter <|> symbol
                           otherwise -> Atom atom
 
 parseNumber :: Parser LispVal
-parseNumber = liftM (Number . read) $ many1 digit
+parseNumber = do string "#b" <|> string "#o" <|> string "#d"<|>liftM (Number . read) $ many1 digit
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
