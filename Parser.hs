@@ -10,6 +10,8 @@ data LispVal = Atom String
              | Number Integer
              | String String
              | Bool Bool
+               deriving (Show)
+
 
 -- Parsers
 symbol :: Parser Char
@@ -56,9 +58,7 @@ parseExpr = parseAtom
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
                    Left err -> "No match: " ++ show err
-                   Right val -> case val of
-                                  String s -> "String: " ++ show s
-                                  otherwise -> "Found value"
+                   Right val -> show val
 
 -- Main Loop
 main :: IO ()
