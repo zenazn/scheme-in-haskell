@@ -1,7 +1,8 @@
 module Main where
 import System.Environment
 import Text.ParserCombinators.Parsec hiding (spaces)
-import Monad
+import Numeric(readInt, readDec, readOct, readHex)
+import Char (digitToInt)
 
 -- Datatypes
 data LispVal = Atom String
@@ -12,6 +13,10 @@ data LispVal = Atom String
              | Bool Bool
                deriving (Show)
 
+-- Supporting Functions
+
+readBin :: (Integral a) => ReadS a
+readBin = readInt 2 (\c -> c == '0' || c == '1') digitToInt
 
 -- Parsers
 symbol :: Parser Char
@@ -40,18 +45,28 @@ parseAtom :: Parser LispVal
 parseAtom = do first <- letter <|> symbol
                rest <- many (letter <|> digit <|> symbol)
                let atom = first:rest
-               return $ case atom of
-                          "#t" -> Bool True
-                          "#f" -> Bool False
-                          otherwise -> Atom atom
+               return $ Atom atom
 
-parseNumber :: Parser LispVal
-parseNumber = liftM (Number . read) $ many1 digit
+parsePound :: Parser LispVal
+parsePound = do char '#'
+                x <- anyChar
+                case x of
+                  't' -> return $ Bool True
+                  'f' -> return $ Bool False
+                  'd' -> parseNumber readDec digit
+                  'b' -> parseNumber readBin (oneOf "01")
+                  'o' -> parseNumber readOct octDigit
+                  'x' -> parseNumber readHex hexDigit
+
+--I'll let Haskell infer for now
+parseNumber f d = do num <- many1 d
+                     return $ Number (fst (head (f num))) -- We have a lot of unused power here, which will be utilized when I solve exercise 6.
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
         <|> parseString
-        <|> parseNumber
+        <|> parseNumber readDec digit
+        <|> parsePound
 
 
 -- Parsing logic
