@@ -3,6 +3,7 @@ import System.Environment
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Numeric(readInt, readDec, readOct, readHex)
 import Char (digitToInt)
+import qualified Data.Map as Map
 
 -- Datatypes
 data LispVal = Atom String
@@ -11,12 +12,17 @@ data LispVal = Atom String
              | Number Integer
              | String String
              | Bool Bool
+             | Char Char
                deriving (Show)
 
 -- Supporting Functions
 
 readBin :: (Integral a) => ReadS a
 readBin = readInt 2 (\c -> c == '0' || c == '1') digitToInt
+
+--Supporting Definitions
+
+charIDs = Map.fromList([("space",' '),("newline",'\n'),("tab",'\t')])
 
 -- Parsers
 symbol :: Parser Char
@@ -57,6 +63,14 @@ parsePound = do char '#'
                   'b' -> parseNumber readBin (oneOf "01")
                   'o' -> parseNumber readOct octDigit
                   'x' -> parseNumber readHex hexDigit
+                  '\\' -> parseChar
+
+parseChar :: Parser LispVal
+parseChar = do ident <- many (noneOf " ")
+               case length ident of
+                 0 -> return $ Char ' ' -- Will eventually need to be more robust.
+                 1 -> return $ Char (head ident)
+                 _ -> return $ Char ((\(Just x) -> x) (Map.lookup ident charIDs))
 
 --I'll let Haskell infer for now
 parseNumber f d = do num <- many1 d
