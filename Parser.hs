@@ -1,8 +1,9 @@
 module Main where
 import System.Environment
 import Text.ParserCombinators.Parsec hiding (spaces)
-import Numeric(readInt, readDec, readOct, readHex)
+import Numeric(readInt, readDec, readOct, readHex, readFloat)
 import Char (digitToInt)
+import List (sort)
 import qualified Data.Map as Map
 
 -- Datatypes
@@ -10,6 +11,7 @@ data LispVal = Atom String
              | List [LispVal]
              | DottedList [LispVal] LispVal -- Apparently a valid datatype in Scheme
              | Number Integer
+             | Float Float
              | String String
              | Bool Bool
              | Char Char
@@ -23,6 +25,14 @@ readBin = readInt 2 (\c -> c == '0' || c == '1') digitToInt
 --Supporting Definitions
 
 charIDs = Map.fromList([("space",' '),("newline",'\n'),("tab",'\t')])
+
+--Shortcut Functions
+
+parseDec = parseNumber readDec digit
+parseBin = parseNumber readBin (oneOf "01")
+parseOct = parseNumber readOct octDigit
+parseHex = parseNumber readHex hexDigit
+
 
 -- Parsers
 symbol :: Parser Char
@@ -54,16 +64,28 @@ parseAtom = do first <- letter <|> symbol
                return $ Atom atom
 
 parsePound :: Parser LispVal
-parsePound = do char '#'
-                x <- anyChar
-                case x of
-                  't' -> return $ Bool True
-                  'f' -> return $ Bool False
-                  'd' -> parseNumber readDec digit
-                  'b' -> parseNumber readBin (oneOf "01")
-                  'o' -> parseNumber readOct octDigit
-                  'x' -> parseNumber readHex hexDigit
-                  '\\' -> parseChar
+parsePound = do
+  char '#'
+  x <- anyChar
+  if (x == '\\') then
+      parseChar
+      else do
+          y <- (do {char '#'; anyChar} <|> return '#')
+          case (sort (x:y:[])) of
+            "#t" -> return $ Bool True
+            "#f" -> return $ Bool False
+            "#d" -> parseDec '?'
+            "#b" -> parseBin '?'
+            "#o" -> parseOct '?'
+            "#x" -> parseHex '?'
+            "di" -> parseDec 'i'
+            "bi" -> parseBin 'i'
+            "io" -> parseOct 'i'
+            "ix" -> parseHex 'i'
+            "de" -> parseDec 'e'
+            "be" -> parseBin 'e'
+            "eo" -> parseOct 'e'
+            "ex" -> parseHex 'e'
 
 parseChar :: Parser LispVal
 parseChar = do ident <- many (noneOf " ")
@@ -73,13 +95,13 @@ parseChar = do ident <- many (noneOf " ")
                  _ -> return $ Char ((\(Just x) -> x) (Map.lookup ident charIDs))
 
 --I'll let Haskell infer for now
-parseNumber f d = do num <- many1 d
-                     return $ Number (fst (head (f num))) -- We have a lot of unused power here, which will be utilized when I solve exercise 6.
+parseNumber f d p = do num <- many1 d
+                       return $ Number (fst (head (f num))) -- We have a lot of unused power here, which will be utilized when I solve exercise 6.
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
         <|> parseString
-        <|> parseNumber readDec digit
+        <|> parseDec '?'
         <|> parsePound
 
 
