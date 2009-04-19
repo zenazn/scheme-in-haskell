@@ -25,16 +25,17 @@ readBin = readInt 2 (\c -> c == '0' || c == '1') digitToInt
 --Supporting Definitions
 
 charIDs = Map.fromList([("space",' '),("newline",'\n'),("tab",'\t')])
+numChars = "sdflSDFL."
 
 --Shortcut Functions
 
-parseDec = parseNumber readDec digit
-parseBin = parseNumber readBin (oneOf "01")
-parseOct = parseNumber readOct octDigit
-parseHex = parseNumber readHex hexDigit
+parseDec = parseNumber readDec (digit, oneOf ("012346789" ++ numChars))
+parseBin = parseNumber readBin (oneOf ("01"), oneOf ("01" ++ numChars))
+parseOct = parseNumber readOct (octDigit, oneOf ("01234567" ++ numChars))
+parseHex = parseNumber readHex (hexDigit, oneOf ("0123456789ABCDEFabcdef" ++ numChars))
 
 
--- Parsers
+-- Char
 symbol :: Parser Char
 symbol = oneOf "!$%&|*+.-/:<=>?@^_~"
 
@@ -95,7 +96,7 @@ parseChar = do ident <- many (noneOf " ")
                  _ -> return $ Char ((\(Just x) -> x) (Map.lookup ident charIDs))
 
 --I'll let Haskell infer for now
-parseNumber f d p = do num <- many1 d
+parseNumber f d p = do num <- many1 (fst d)
                        return $ Number (fst (head (f num))) -- We have a lot of unused power here, which will be utilized when I solve exercise 6.
 
 parseExpr :: Parser LispVal
