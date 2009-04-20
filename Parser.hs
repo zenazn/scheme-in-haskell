@@ -12,6 +12,11 @@ import Datatypes
 readBin :: (Integral a) => ReadS a
 readBin = readInt 2 (\c -> c == '0' || c == '1') digitToInt
 
+
+readBinFloat = readFloat -- Placeholders.
+readOctFloat = readFloat
+readHexFloat = readFloat
+
 --Supporting Definitions
 
 charIDs = Map.fromList([("space",' '),("newline",'\n'),("tab",'\t')])
@@ -19,10 +24,10 @@ expChars = "sdflSDFL"
 
 --Shortcut Functions
  
-parseDec = parseNumber readDec (digit, oneOf ("012346789" ++ numChars))
-parseBin = parseNumber readBin (oneOf ("01"), oneOf ("01" ++ numChars))
-parseOct = parseNumber readOct (octDigit, oneOf ("01234567" ++ numChars))
-parseHex = parseNumber readHex (hexDigit, oneOf ("0123456789ABCDEFabcdef" ++ numChars))
+parseDec = parseNumber (readDec, readFloat) digit
+parseBin = parseNumber (readBin, readBinFloat) (oneOf ("01"))
+parseOct = parseNumber (readOct, readOctFloat) octDigit
+parseHex = parseNumber (readHex, readHexFloat) hexDigit
 
 
 -- Char
