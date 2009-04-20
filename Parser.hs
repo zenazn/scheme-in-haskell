@@ -38,11 +38,11 @@ parseHex = parseNumber readHex (hexDigit, oneOf ("0123456789ABCDEFabcdef" ++ num
 
 -- Char
 symbol :: Parser Char
-symbol = oneOf "!$%&|*+.-/:<=>?@^_~"
+symbol = initialSymbol <|> oneOf "+-.@"
 
 -- '+', '-', and '.' aren't allowed to be the first character of an atom
 initialSymbol :: Parser Char
-initialSymbol = oneOf "!$%&|*/:<=>?@^_~"
+initialSymbol = oneOf "!$%&*/:<=>?^_~"
 
 spaces :: Parser ()
 spaces = skipMany1 space
@@ -68,6 +68,10 @@ parseAtom = do first <- letter <|> initialSymbol
                rest <- many (letter <|> digit <|> symbol)
                let atom = first:rest
                return $ Atom atom
+
+-- These are special atoms defined in R5RS spec that begin with "unallowed" symbols
+parsePeculiarAtom :: Parser LispVal
+parsePeculiarAtom = liftM Atom $ try (string "...") <|> string "+" <|> string "-"
 
 parsePound :: Parser LispVal
 parsePound = do
@@ -106,12 +110,13 @@ parseNumber f d p = do num <- many1 (fst d)
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
+        <|> parsePeculiarAtom
         <|> parseString
         <|> parseDec '?'
         <|> parsePound
         <|> parseQuoted
         <|> parseQuasiQuoted
-        <|> parseUnquoteSplicing -- Needs to be before Unquote because they share a prefix
+        <|> parseUnquoteSplicing
         <|> parseUnquote
         <|> do char '('
                x <- try parseList <|> parseDottedList
@@ -141,13 +146,13 @@ parseQuasiQuoted = do
 
 parseUnquote :: Parser LispVal
 parseUnquote = do
-  char ','
+  try (char ',')
   x <- parseExpr
   return $ List [Atom "unquote", x]
 
 parseUnquoteSplicing :: Parser LispVal
 parseUnquoteSplicing = do
-  string ",@"
+  try (string ",@")
   x <- parseExpr
   return $ List [Atom "unquote-splicing", x]
 
