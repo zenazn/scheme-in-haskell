@@ -107,19 +107,19 @@ parseExpr = parseAtom
         <|> parseQuasiQuoted
         <|> parseUnquoteSplicing
         <|> parseUnquote
-        <|> do char '('
-               x <- try parseList <|> parseDottedList
-               char ')'
-               return x
+        <|> parseAnyList
 
-parseList :: Parser LispVal
-parseList = liftM List $ sepBy parseExpr spaces
-
-parseDottedList :: Parser LispVal
-parseDottedList = do
-  head <- endBy parseExpr spaces
-  tail <- char '.' >> spaces >> parseExpr
-  return $ DottedList head tail
+parseAnyList :: Parser LispVal
+parseAnyList = do p <- char '('
+                  many space
+                  x <- sepEndBy parseExpr spaces
+                  c <- char '.' <|> char ')'
+                  if c == '.' then do 
+                                y <- spaces >> parseExpr
+                                many space
+                                char ')'
+                                return $ DottedList x y
+                    else do return $ List x
 
 parseQuoted :: Parser LispVal
 parseQuoted = do
