@@ -7,6 +7,7 @@ data LispVal = Atom String
              | DottedList [LispVal] LispVal -- Apparently a valid datatype in Scheme
              | Number Integer
              | Float Float
+             | Rational Rational
              | String String
              | Bool Bool
              | Char Char
@@ -19,6 +20,7 @@ showVal (List contents) = "(" ++ unwordsList contents ++ ")"
 showVal (DottedList head tail) = "(" ++ unwordsList head ++ " . " ++ showVal tail ++ ")"
 showVal (Number contents) = show contents
 showVal (Float contents) = show contents
+showVal (Rational contents) = show contents
 showVal (String contents) = "\"" ++ contents ++ "\""
 showVal (Bool True) = "#t"
 showVal (Bool False) = "#f"

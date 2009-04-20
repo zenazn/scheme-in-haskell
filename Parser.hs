@@ -1,6 +1,8 @@
 module Parser ( parseScheme ) where
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Numeric(readInt, readDec, readOct, readHex, readFloat)
+import Ratio
+import Complex
 import Char (digitToInt)
 import List (sort)
 import Monad (liftM)
@@ -12,6 +14,8 @@ import Datatypes
 readBin :: (Integral a) => ReadS a
 readBin = readInt 2 (\c -> c == '0' || c == '1') digitToInt
 
+fh :: [(a, b)] -> a
+fh x = fst (head (x))
 
 readBinFloat = readFloat -- Placeholders.
 readOctFloat = readFloat
@@ -24,10 +28,10 @@ expChars = "sdflSDFL"
 
 --Shortcut Functions
  
-parseDec = parseNumber (readDec, readFloat) digit
-parseBin = parseNumber (readBin, readBinFloat) (oneOf ("01"))
-parseOct = parseNumber (readOct, readOctFloat) octDigit
-parseHex = parseNumber (readHex, readHexFloat) hexDigit
+parseDec = parseNumber 10.0 (readDec, readFloat) digit
+parseBin = parseNumber 2.0 (readBin, readBinFloat) (oneOf ("01"))
+parseOct = parseNumber 8.0 (readOct, readOctFloat) octDigit
+parseHex = parseNumber 16.0 (readHex, readHexFloat) hexDigit
 
 
 -- Char
@@ -82,6 +86,8 @@ parsePound = do
             "#b" -> parseBin '?'
             "#o" -> parseOct '?'
             "#x" -> parseHex '?'
+            "#e" -> parseDec 'e'
+            "#i" -> parseDec 'i'
             "di" -> parseDec 'i'
             "bi" -> parseBin 'i'
             "io" -> parseOct 'i'
@@ -99,14 +105,16 @@ parseChar = do ident <- many (noneOf " ")
                  _ -> return $ Char ((\(Just x) -> x) (Map.lookup ident charIDs))
 
 --I'll let Haskell infer for now
-parseNumber (f,g) d p' = do predec <- many1 d
-                            dec <- (do {char '.'; many d} <|> return "!")
-                            expchar <- (do {oneOf expChars} <|> return '!')
-                            exp <- (if expchar /= '!' then many d else return "0")
-                            let p = (if p' == '?' then if (dec /= "!" || expchar /= '!') then 'i' else 'e' else p')
-                            if dec == "!" then return $ Number (fst (head (f ("0" ++ predec))) * 10 ^ (fst (head (f exp))))
-                                else do if p == 'i' then return $ Float ((fst (head (g ("0" ++ predec ++ "." ++ dec ++ "0" )))) * 10 ^ (fst (head (f exp))))
-                                           else return $ Float 0.1337
+parseNumber b (f,g) d p' = do 
+  predec <- many1 d
+  dec <- (do {char '.'; many d} <|> return "!")
+  expchar <- (do {oneOf expChars} <|> return '!')
+  exp <- (if expchar /= '!' then many d else return "0")
+  let p = (if p' == '?' then if (dec /= "!" || expchar /= '!') then 'i' else 'e' else p')
+  let r = if (dec == "!" && expchar == '!') then (Number ((fh (f ("0" ++ predec))) * (round b) ^ (fh (f exp))))
+              else if p == 'i' then (Float (((fh (g ("0" ++ predec ++ "." ++ dec ++ "0" )))) * b ^ (fh (f exp))))
+                       else (Rational ((((fh (f ("0" ++ predec))) % 1) + ((fh (f ("0" ++ dec))) % (round b) ^ (length dec)) * (((round b) ^ (fh (f (exp)))) % 1))))
+  return r
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
