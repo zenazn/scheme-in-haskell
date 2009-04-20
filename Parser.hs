@@ -15,10 +15,10 @@ readBin = readInt 2 (\c -> c == '0' || c == '1') digitToInt
 --Supporting Definitions
 
 charIDs = Map.fromList([("space",' '),("newline",'\n'),("tab",'\t')])
-numChars = "sdflSDFL."
+expChars = "sdflSDFL"
 
 --Shortcut Functions
-
+ 
 parseDec = parseNumber readDec (digit, oneOf ("012346789" ++ numChars))
 parseBin = parseNumber readBin (oneOf ("01"), oneOf ("01" ++ numChars))
 parseOct = parseNumber readOct (octDigit, oneOf ("01234567" ++ numChars))
@@ -28,11 +28,11 @@ parseHex = parseNumber readHex (hexDigit, oneOf ("0123456789ABCDEFabcdef" ++ num
 -- Char
 symbol :: Parser Char
 symbol = initialSymbol <|> oneOf "+-.@"
-
+ 
 -- '+', '-', and '.' aren't allowed to be the first character of an atom
 initialSymbol :: Parser Char
 initialSymbol = oneOf "!$%&*/:<=>?^_~"
-
+ 
 spaces :: Parser ()
 spaces = skipMany1 space
 
@@ -44,14 +44,14 @@ escapeChar = do char '\\'
                            'r' -> '\r'
                            't' -> '\t'
                            otherwise -> esc
-
-
+ 
+ 
 parseString :: Parser LispVal
 parseString = do char '"'
                  x <- many (escapeChar <|> noneOf "\"")
                  char '"'
                  return $ String x
-
+ 
 parseAtom :: Parser LispVal
 parseAtom = do first <- letter <|> initialSymbol
                rest <- many (letter <|> digit <|> symbol)
@@ -94,8 +94,14 @@ parseChar = do ident <- many (noneOf " ")
                  _ -> return $ Char ((\(Just x) -> x) (Map.lookup ident charIDs))
 
 --I'll let Haskell infer for now
-parseNumber f d p = do num <- many1 (fst d)
-                       return $ Number (fst (head (f num))) -- We have a lot of unused power here, which will be utilized when I solve exercise 6.
+parseNumber (f,g) d p' = do predec <- many1 d
+                            dec <- (do {char '.'; many d} <|> return "!")
+                            expchar <- (do {oneOf expChars} <|> return '!')
+                            exp <- (if expchar /= '!' then many d else return "0")
+                            let p = (if p' == '?' then if (dec /= "!" || expchar /= '!') then 'i' else 'e' else p')
+                            if dec == "!" then return $ Number (fst (head (f ("0" ++ predec))) * 10 ^ (fst (head (f exp))))
+                                else do if p == 'i' then return $ Float ((fst (head (g ("0" ++ predec ++ "." ++ dec ++ "0" )))) * 10 ^ (fst (head (f exp))))
+                                           else return $ Float 0.1337
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
