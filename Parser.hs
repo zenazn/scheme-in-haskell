@@ -4,6 +4,7 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import Numeric(readInt, readDec, readOct, readHex, readFloat)
 import Char (digitToInt)
 import List (sort)
+import Monad (liftM)
 import qualified Data.Map as Map
 
 -- Datatypes
@@ -39,6 +40,10 @@ parseHex = parseNumber readHex (hexDigit, oneOf ("0123456789ABCDEFabcdef" ++ num
 symbol :: Parser Char
 symbol = oneOf "!$%&|*+.-/:<=>?@^_~"
 
+-- '+', '-', and '.' aren't allowed to be the first character of an atom
+initialSymbol :: Parser Char
+initialSymbol = oneOf "!$%&|*/:<=>?@^_~"
+
 spaces :: Parser ()
 spaces = skipMany1 space
 
@@ -59,7 +64,7 @@ parseString = do char '"'
                  return $ String x
 
 parseAtom :: Parser LispVal
-parseAtom = do first <- letter <|> symbol
+parseAtom = do first <- letter <|> initialSymbol
                rest <- many (letter <|> digit <|> symbol)
                let atom = first:rest
                return $ Atom atom
@@ -104,7 +109,47 @@ parseExpr = parseAtom
         <|> parseString
         <|> parseDec '?'
         <|> parsePound
+        <|> parseQuoted
+        <|> parseQuasiQuoted
+        <|> parseUnquoteSplicing -- Needs to be before Unquote because they share a prefix
+        <|> parseUnquote
+        <|> do char '('
+               x <- try parseList <|> parseDottedList
+               char ')'
+               return x
 
+parseList :: Parser LispVal
+parseList = liftM List $ sepBy parseExpr spaces
+
+parseDottedList :: Parser LispVal
+parseDottedList = do
+  head <- endBy parseExpr spaces
+  tail <- char '.' >> spaces >> parseExpr
+  return $ DottedList head tail
+
+parseQuoted :: Parser LispVal
+parseQuoted = do
+  char '\''
+  x <- parseExpr
+  return $ List [Atom "quote", x]
+
+parseQuasiQuoted :: Parser LispVal
+parseQuasiQuoted = do
+  char '`'
+  x <- parseExpr
+  return $ List [Atom "quasiquote", x]
+
+parseUnquote :: Parser LispVal
+parseUnquote = do
+  char ','
+  x <- parseExpr
+  return $ List [Atom "unquote", x]
+
+parseUnquoteSplicing :: Parser LispVal
+parseUnquoteSplicing = do
+  string ",@"
+  x <- parseExpr
+  return $ List [Atom "unquote-splicing", x]
 
 -- Parsing logic
 readExpr :: String -> String
