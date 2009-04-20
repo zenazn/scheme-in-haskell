@@ -1,5 +1,5 @@
 # Our handy-dandy Makefile. Update this if the build process changes
 # It spits out an executable named "scheme" that is .gitignore'd
 
-scheme : Main.hs Parser.hs Datatypes.hs
+scheme : Main.hs Parser.hs Datatypes.hs Eval.hs
 	ghc -o scheme --make Main.hs

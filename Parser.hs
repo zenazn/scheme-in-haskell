@@ -1,6 +1,8 @@
 module Parser ( parseScheme ) where
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Numeric(readInt, readDec, readOct, readHex, readFloat)
+import Ratio
+import Complex
 import Char (digitToInt)
 import List (sort)
 import Monad (liftM)
@@ -12,27 +14,34 @@ import Datatypes
 readBin :: (Integral a) => ReadS a
 readBin = readInt 2 (\c -> c == '0' || c == '1') digitToInt
 
+fh :: [(a, b)] -> a
+fh x = fst (head (x))
+
+readBinFloat = readFloat -- Placeholders.
+readOctFloat = readFloat
+readHexFloat = readFloat
+
 --Supporting Definitions
 
 charIDs = Map.fromList([("space",' '),("newline",'\n'),("tab",'\t')])
-numChars = "sdflSDFL."
+expChars = "sdflSDFL"
 
 --Shortcut Functions
-
-parseDec = parseNumber readDec (digit, oneOf ("012346789" ++ numChars))
-parseBin = parseNumber readBin (oneOf ("01"), oneOf ("01" ++ numChars))
-parseOct = parseNumber readOct (octDigit, oneOf ("01234567" ++ numChars))
-parseHex = parseNumber readHex (hexDigit, oneOf ("0123456789ABCDEFabcdef" ++ numChars))
+ 
+parseDec = parseNumber 10.0 (readDec, readFloat) digit
+parseBin = parseNumber 2.0 (readBin, readBinFloat) (oneOf ("01"))
+parseOct = parseNumber 8.0 (readOct, readOctFloat) octDigit
+parseHex = parseNumber 16.0 (readHex, readHexFloat) hexDigit
 
 
 -- Char
 symbol :: Parser Char
 symbol = initialSymbol <|> oneOf "+-.@"
-
+ 
 -- '+', '-', and '.' aren't allowed to be the first character of an atom
 initialSymbol :: Parser Char
 initialSymbol = oneOf "!$%&*/:<=>?^_~"
-
+ 
 spaces :: Parser ()
 spaces = skipMany1 space
 
@@ -44,14 +53,14 @@ escapeChar = do char '\\'
                            'r' -> '\r'
                            't' -> '\t'
                            otherwise -> esc
-
-
+ 
+ 
 parseString :: Parser LispVal
 parseString = do char '"'
                  x <- many (escapeChar <|> noneOf "\"")
                  char '"'
                  return $ String x
-
+ 
 parseAtom :: Parser LispVal
 parseAtom = do first <- letter <|> initialSymbol
                rest <- many (letter <|> digit <|> symbol)
@@ -77,6 +86,8 @@ parsePound = do
             "#b" -> parseBin '?'
             "#o" -> parseOct '?'
             "#x" -> parseHex '?'
+            "#e" -> parseDec 'e'
+            "#i" -> parseDec 'i'
             "di" -> parseDec 'i'
             "bi" -> parseBin 'i'
             "io" -> parseOct 'i'
@@ -94,8 +105,16 @@ parseChar = do ident <- many (noneOf " ")
                  _ -> return $ Char ((\(Just x) -> x) (Map.lookup ident charIDs))
 
 --I'll let Haskell infer for now
-parseNumber f d p = do num <- many1 (fst d)
-                       return $ Number (fst (head (f num))) -- We have a lot of unused power here, which will be utilized when I solve exercise 6.
+parseNumber b (f,g) d p' = do 
+  predec <- many1 d
+  dec <- (do {char '.'; many d} <|> return "!")
+  expchar <- (do {oneOf expChars} <|> return '!')
+  exp <- (if expchar /= '!' then many d else return "0")
+  let p = (if p' == '?' then if (dec /= "!" || expchar /= '!') then 'i' else 'e' else p')
+  let r = if (dec == "!" && expchar == '!') then (Number ((fh (f ("0" ++ predec))) * (round b) ^ (fh (f exp))))
+              else if p == 'i' then (Float (((fh (g ("0" ++ predec ++ "." ++ dec ++ "0" )))) * b ^ (fh (f exp))))
+                       else (Rational ((((fh (f ("0" ++ predec))) % 1) + ((fh (f ("0" ++ dec))) % (round b) ^ (length dec)) * (((round b) ^ (fh (f (exp)))) % 1))))
+  return r
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
@@ -146,7 +165,7 @@ parseUnquoteSplicing = do
   return $ List [Atom "unquote-splicing", x]
 
 -- Parsing logic
-parseScheme :: String -> String
+parseScheme :: String -> LispVal
 parseScheme input = case parse parseExpr "lisp" input of
-                   Left err -> "No match: " ++ show err
-                   Right val -> show val
+                   Left err -> String ("No match: " ++ show err)
+                   Right val -> val
