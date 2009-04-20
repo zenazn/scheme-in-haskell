@@ -1,4 +1,5 @@
 # Our handy-dandy Makefile. Update this if the build process changes
-# It spits out a .o file so it can be ignored in .gitignore
-parser : Parser.hs
-	ghc -o scheme --make Parser.hs
+# It spits out an executable named "scheme" that is .gitignore'd
+
+scheme : Main.hs Parser.hs Datatypes.hs
+	ghc -o scheme --make Main.hs

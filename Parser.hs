@@ -1,37 +1,11 @@
-module Main where
-import System.Environment
+module Parser ( parseScheme ) where
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Numeric(readInt, readDec, readOct, readHex, readFloat)
 import Char (digitToInt)
 import List (sort)
 import Monad (liftM)
 import qualified Data.Map as Map
-
--- Datatypes
-data LispVal = Atom String
-             | List [LispVal]
-             | DottedList [LispVal] LispVal -- Apparently a valid datatype in Scheme
-             | Number Integer
-             | Float Float
-             | String String
-             | Bool Bool
-             | Char Char
-instance Show LispVal where show = showVal
-
--- Display LispVals
-showVal :: LispVal -> String
-showVal (Atom name) = name
-showVal (List contents) = "(" ++ unwordsList contents ++ ")"
-showVal (DottedList head tail) = "(" ++ unwordsList head ++ " . " ++ showVal tail ++ ")"
-showVal (Number contents) = show contents
--- Need one for Float
-showVal (String contents) = "\"" ++ contents ++ "\""
-showVal (Bool True) = "#t"
-showVal (Bool False) = "#f"
--- Need one for Char
-
-unwordsList :: [LispVal] -> String
-unwordsList = unwords . map showVal
+import Datatypes
 
 -- Supporting Functions
 
@@ -172,13 +146,7 @@ parseUnquoteSplicing = do
   return $ List [Atom "unquote-splicing", x]
 
 -- Parsing logic
-readExpr :: String -> String
-readExpr input = case parse parseExpr "lisp" input of
+parseScheme :: String -> String
+parseScheme input = case parse parseExpr "lisp" input of
                    Left err -> "No match: " ++ show err
                    Right val -> show val
-
--- Main Loop
-main :: IO ()
-main = do
-  args <- getArgs
-  putStrLn (readExpr (args !! 0))
