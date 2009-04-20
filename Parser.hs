@@ -165,7 +165,7 @@ parseUnquoteSplicing = do
   return $ List [Atom "unquote-splicing", x]
 
 -- Parsing logic
-parseScheme :: String -> String
+parseScheme :: String -> LispVal
 parseScheme input = case parse parseExpr "lisp" input of
-                   Left err -> "No match: " ++ show err
-                   Right val -> show val
+                   Left err -> String ("No match: " ++ show err)
+                   Right val -> val
