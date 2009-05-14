@@ -1,6 +1,7 @@
-module Datatypes ( LispVal(..), LispError(..), ThrowsError, throwError, catchError, trapError, extractValue ) where
+module Datatypes ( LispVal(..), LispError(..), ThrowsError, IOThrowsError, Env, nullEnv, throwError, catchError, trapError, extractValue, runErrorT, liftThrows, liftIO ) where
 import Control.Monad.Error
 import Text.ParserCombinators.Parsec(ParseError)
+import Data.IORef
 
 -- Scheme Datatypes
 
@@ -28,6 +29,15 @@ instance Error LispError where
     strMsg = Default
 
 type ThrowsError = Either LispError
+
+type IOThrowsError = ErrorT LispError IO
+
+-- Environment
+
+type Env = IORef [(String, IORef LispVal)]
+
+nullEnv :: IO Env
+nullEnv = newIORef []
 
 -- Display LispVals
 showVal :: LispVal -> String
@@ -63,3 +73,7 @@ trapError action = catchError action (return . show)
 
 extractValue :: ThrowsError a -> a
 extractValue (Right val) = val
+
+liftThrows :: ThrowsError a -> IOThrowsError a
+liftThrows (Left err) = throwError err
+liftThrows (Right val) = return val
