@@ -3,6 +3,7 @@ import System.Environment
 import Parser
 import Eval
 import Datatypes
+import Primitives
 import IO hiding (try)
 import Monad(liftM)
 
@@ -31,10 +32,10 @@ until_ pred prompt action = do
      else action result >> until_ pred prompt action
 
 runOne :: String -> IO ()
-runOne expr = nullEnv >>= flip evalAndPrint expr
+runOne expr = primitiveBindings >>= flip evalAndPrint expr
 
 runRepl :: IO ()
-runRepl = nullEnv >>= until_ (== "quit") (readPrompt "Lisp>>> ") . evalAndPrint
+runRepl = primitiveBindings >>= until_ (== "quit") (readPrompt "Lisp>>> ") . evalAndPrint
 
 -- This file contains the main loop of the interpreter
 

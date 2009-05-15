@@ -14,6 +14,9 @@ data LispVal = Atom String
              | String String
              | Bool Bool
              | Char Char
+             | PrimitiveFunc ([LispVal] -> ThrowsError LispVal)
+             | Func {params :: [String], vararg :: (Maybe String), 
+                      body :: [LispVal], closure :: Env}
 instance Show LispVal where show = showVal
 
 data LispError = NumArgs Integer [LispVal]
@@ -51,6 +54,12 @@ showVal (String contents) = "\"" ++ contents ++ "\""
 showVal (Bool True) = "#t"
 showVal (Bool False) = "#f"
 showVal (Char x) = '#':'\\':x:[]
+showVal (PrimitiveFunc _) = "<primitive>"
+showVal (Func {params = args, vararg = varargs, body = body, closure = env}) = 
+  "(lambda (" ++ unwords (map show args) ++ 
+     (case varargs of 
+        Nothing -> ""
+        Just arg -> " . " ++ arg) ++ ") ...)"
 
 showError :: LispError -> String
 showError (UnboundVar message varname) = message ++ ": " ++ varname
