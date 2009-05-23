@@ -106,6 +106,7 @@ apply (Func params varargs body closure) args =
                                   Nothing -> return env
 apply (IOFunc func) args = func args
 
+
 makeFunc varargs env params body = return $ Func (map show params) varargs body env
 makeNormalFunc = makeFunc Nothing
 makeVarargs = makeFunc . Just . show
