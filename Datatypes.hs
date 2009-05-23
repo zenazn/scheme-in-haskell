@@ -17,6 +17,8 @@ data LispVal = Atom String
              | PrimitiveFunc ([LispVal] -> ThrowsError LispVal)
              | Func {params :: [String], vararg :: (Maybe String), 
                       body :: [LispVal], closure :: Env}
+             | IOFunc ([LispVal] -> IOThrowsError LispVal)
+             | Port Handle
 instance Show LispVal where show = showVal
 
 data LispError = NumArgs Integer [LispVal]
@@ -60,6 +62,8 @@ showVal (Func {params = args, vararg = varargs, body = body, closure = env}) =
      (case varargs of 
         Nothing -> ""
         Just arg -> " . " ++ arg) ++ ") ...)"
+showVal (IOFunc _) = "<IO primitive>"
+showVal (Port _) = "<IO port>"
 
 showError :: LispError -> String
 showError (UnboundVar message varname) = message ++ ": " ++ varname

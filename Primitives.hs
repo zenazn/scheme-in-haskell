@@ -2,11 +2,13 @@ module Primitives (primitiveBindings) where
 import Monad (liftM)
 import Datatypes
 import Eval (bindVars)
+import IOPrimitives
 
 --Primitive environment
 primitiveBindings :: IO Env
-primitiveBindings = nullEnv >>= (flip bindVars $ map makePrimitiveFunc primitives)
-    where makePrimitiveFunc (var, func) = (var, PrimitiveFunc func)
+primitiveBindings = nullEnv >>= (flip bindVars $ map (makeFunc IOFunc) ioPrimitives
+                                ++ map (makeFunc PrimitiveFunc) primitives)
+    where makeFunc constructor (var, func) = (var, constructor func)
 
 --Primitives:
 primitives :: [(String, [LispVal] -> ThrowsError LispVal)]

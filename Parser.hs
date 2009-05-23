@@ -1,4 +1,4 @@
-module Parser ( parseScheme ) where
+module Parser ( parseScheme parseSchemeList ) where
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Numeric(readInt, readDec, readOct, readHex, readFloat)
 import Ratio
@@ -165,7 +165,11 @@ parseUnquoteSplicing = do
   return $ List [Atom "unquote-splicing", x]
 
 -- Parsing logic
-parseScheme :: String -> ThrowsError LispVal
-parseScheme input = case parse parseExpr "lisp" input of
-                   Left err -> throwError $ Parser err
-                   Right val -> return val
+parseGeneric :: Parser a -> String -> ThrowsError a
+parseGeneric parser input = case parse parser "scheme" input of
+                              Left err -> throwError $ Parser err
+                              Right val -> return val
+
+
+parseScheme = parseGeneric parseExpr
+parseSchemeList = parseGeneric (endBy parseExpr spaces)
