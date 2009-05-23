@@ -172,4 +172,4 @@ parseGeneric parser input = case parse parser "scheme" input of
 
 
 parseScheme = parseGeneric parseExpr
-parseSchemeList = parseGeneric (sepEndBy parseExpr (many space))
+parseSchemeList = parseGeneric $ do sepEndBy (try parseExpr) spaces
