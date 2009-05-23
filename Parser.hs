@@ -1,4 +1,4 @@
-module Parser ( parseScheme parseSchemeList ) where
+module Parser ( parseScheme, parseSchemeList ) where
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Numeric(readInt, readDec, readOct, readHex, readFloat)
 import Ratio

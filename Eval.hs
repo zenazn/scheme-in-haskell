@@ -1,8 +1,8 @@
-module Eval (eval, bindVars) where 
+module Eval (eval, bindVars, apply, load) where 
 import Datatypes
-import IOPrimitives (load)
 import Monad (liftM)
 import Data.IORef
+import Parser (parseSchemeList)
 
 eval :: Env -> LispVal -> IOThrowsError LispVal
 
@@ -39,15 +39,16 @@ eval env (List (Atom "lambda" : DottedList params varargs : body)) =
     makeVarargs varargs env params body
 eval env (List (Atom "lambda" : varargs@(Atom _) : body)) =
     makeVarargs varargs env [] body
-eval env (List (function : args)) = do 
-    func <- eval env function
-    argVals <- mapM (eval env) args
-    apply func argVals
 
 -- IO
 eval env (List [Atom "load", String filename]) =
     load filename >>= liftM last . mapM (eval env)
 
+-- Catch-all for user-defined functions
+eval env (List (function : args)) = do 
+    func <- eval env function
+    argVals <- mapM (eval env) args
+    apply func argVals
 
 -- Bad forms
 eval env badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
@@ -108,3 +109,7 @@ apply (IOFunc func) args = func args
 makeFunc varargs env params body = return $ Func (map show params) varargs body env
 makeNormalFunc = makeFunc Nothing
 makeVarargs = makeFunc . Just . show
+
+-- IO Helpers
+load :: String -> IOThrowsError [LispVal]
+load filename = (liftIO $ readFile filename) >>= liftThrows . parseSchemeList

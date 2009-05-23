@@ -2,6 +2,7 @@ module Datatypes ( LispVal(..), LispError(..), ThrowsError, IOThrowsError, Env, 
 import Control.Monad.Error
 import Text.ParserCombinators.Parsec(ParseError)
 import Data.IORef
+import IO (Handle)
 
 -- Scheme Datatypes
 
